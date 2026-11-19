@@ -1,0 +1,16 @@
+name: crypto_smart_bot
+description: Paper-only crypto trading dashboard
+publish_to: 'none'
+version: 24.0.0+24
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+flutter:
+  uses-material-design: true

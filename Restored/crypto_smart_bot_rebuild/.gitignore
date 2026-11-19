@@ -1,0 +1,13 @@
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/
+**/.gradle/
+**/local.properties
+**/*.iml
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
