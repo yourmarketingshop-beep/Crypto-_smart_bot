@@ -1,0 +1,83 @@
+name: Crypto Smart Bot checks and Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      bot_api_url:
+        description: 'FastAPI server URL'
+        required: false
+        type: string
+        default: 'http://10.0.2.2:8000'
+  push:
+    paths:
+      - 'Restored/crypto_smart_bot_rebuild/backend/**'
+      - 'Restored/crypto_smart_bot_rebuild/flutter_app/**'
+      - 'Restored/crypto_smart_bot_rebuild/docs/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: Restored/crypto_smart_bot_rebuild/backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: Restored/crypto_smart_bot_rebuild/backend
+        run: python -m pip install -r requirements.txt
+
+      - name: Run paper-trading tests
+        working-directory: Restored/crypto_smart_bot_rebuild/backend
+        run: PYTHONPATH=. pytest -q
+
+  android-apk:
+    needs: backend-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: Restored/crypto_smart_bot_rebuild/flutter_app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prepare Android project
+        run: ./tool/prepare_android.sh
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        env:
+          DISPATCH_URL: ${{ github.event.inputs.bot_api_url }}
+          REPOSITORY_URL: ${{ vars.BOT_API_URL }}
+        run: |
+          URL="${DISPATCH_URL:-${REPOSITORY_URL:-http://10.0.2.2:8000}}"
+          URL="${URL%/}"
+          if [[ ! "$URL" =~ ^https?:// ]]; then
+            echo "BOT_API_URL must start with http:// or https://" >&2
+            exit 1
+          fi
+          echo "Building APK with API endpoint: $URL"
+          flutter build apk --release --dart-define="BOT_API_URL=$URL"
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-smart-bot-android-apk
+          path: Restored/crypto_smart_bot_rebuild/flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
